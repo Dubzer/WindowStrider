@@ -13,26 +13,9 @@ obj.license = "MIT"
 
 local log = hs.logger.new("WindowStrider")
 local prettyAlert = dofile(hs.spoons.resourcePath("prettyAlert.lua"))
+local formatHotkey = dofile(hs.spoons.resourcePath("formatHotkey.lua"))
 
 local tinsert, tsort = table.insert, table.sort
-
-local modSymbols = {
-    cmd = "⌘", command = "⌘",
-    ctrl = "⌃", control = "⌃",
-    alt = "⌥", option = "⌥",
-    shift = "⇧",
-}
-
---- @param mods table
---- @param key string
---- @return string
-local function formatHotkey(mods, key)
-    local result = ""
-    for _, mod in ipairs(mods) do
-        result = result .. (modSymbols[mod] or mod)
-    end
-    return result .. string.upper(key)
-end
 
 -- keep references to listeners to avoid getting garbage collected
 local _keep = {}
