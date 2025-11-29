@@ -15,6 +15,24 @@ local log = hs.logger.new("WindowStrider")
 
 local tinsert, tsort = table.insert, table.sort
 
+local modSymbols = {
+    cmd = "⌘", command = "⌘",
+    ctrl = "⌃", control = "⌃",
+    alt = "⌥", option = "⌥",
+    shift = "⇧",
+}
+
+--- @param mods table
+--- @param key string
+--- @return string
+local function formatHotkey(mods, key)
+    local result = ""
+    for _, mod in ipairs(mods) do
+        result = result .. (modSymbols[mod] or mod)
+    end
+    return result .. string.upper(key)
+end
+
 -- keep references to listeners to avoid getting garbage collected
 local _keep = {}
 ---@generic T
@@ -70,11 +88,9 @@ function CycleState:add(windowId)
     end
 end
 
---- Binds a hotkey to switch between windows of the specified applications.
---- @param mods table The modifiers for the hotkey (e.g., {"option"})
---- @param key string The key for the hotkey (e.g., "2")
---- @param apps table A list of application bundle IDs (e.g., {"com.brave.Browser"})
-function obj:bindHotkey(mods, key, apps)
+--- @param apps table
+--- @return function cycleWindows
+local function createWindowSwitcher(apps)
     local filter = keep(hs.window.filter.new(function(window)
         local application = window:application()
         if not application then return false end
@@ -93,7 +109,7 @@ function obj:bindHotkey(mods, key, apps)
     ---@diagnostic disable-next-line: undefined-field
     filter:keepActive()
 
-    keep(hs.hotkey.bind(mods, key, function()
+    return function()
         local starttime = hs.timer.secondsSinceEpoch()
 
         local focused = hs.window.focusedWindow()
@@ -137,6 +153,62 @@ function obj:bindHotkey(mods, key, apps)
         if timeTaken > 0.03 then
             log.d("long time taken: " .. timeTaken)
         end
+    end
+end
+
+--- Binds a hotkey to switch between windows of the specified applications.
+--- @param mods table The modifiers for the hotkey (e.g., {"option"})
+--- @param key string The key for the hotkey (e.g., "2")
+--- @param apps table A list of application bundle IDs (e.g., {"com.brave.Browser"})
+function obj:bindHotkey(mods, key, apps)
+    local cycleWindows = createWindowSwitcher(apps)
+    keep(hs.hotkey.bind(mods, key, cycleWindows))
+    return self
+end
+
+--- Binds a hotkey for dynamic app pinning.
+--- When pressed with the record modifier, pins the currently focused app.
+--- When pressed without, cycles through windows of the pinned app.
+--- @param mods table The base modifiers for the hotkey (e.g., {"option"})
+--- @param key string The key for the hotkey (e.g., "1")
+--- @param recordMod string Additional modifier for recording (e.g., "shift")
+function obj:bindPinHotkey(mods, key, recordMod)
+    local pinnedBundleID = nil
+    local cycleWindows = nil
+
+    local recordModifiers = {}
+    for _, mod in ipairs(mods) do
+        tinsert(recordModifiers, mod)
+    end
+    tinsert(recordModifiers, recordMod)
+
+    keep(hs.hotkey.bind(recordModifiers, key, function()
+        local focused = hs.window.focusedWindow()
+        if not focused then
+            hs.alert.show("⚠️ No focused window to pin")
+            return
+        end
+
+        local app = focused:application()
+        if not app then
+            log.e("focused:application() returned nil")
+            return
+        end
+
+        pinnedBundleID = app:bundleID()
+        cycleWindows = createWindowSwitcher({pinnedBundleID})
+
+        hs.alert.show("📌 Pinned " .. app:name() .. " to " .. formatHotkey(mods, key))
+    end))
+
+    -- Switch hotkey: cycles through pinned app's windows
+    keep(hs.hotkey.bind(mods, key, function()
+        if not pinnedBundleID then
+            hs.alert.show("⚠️ No app pinned")
+            return
+        end
+
+        cycleWindows()
     end))
 
     return self

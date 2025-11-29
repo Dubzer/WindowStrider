@@ -21,6 +21,22 @@ if you have multiple instances of the same application, WindowStrider will cycle
 it works the same way for groups of multiple apps. in the example above, <kbd>option</kbd> + <kbd>3</kbd> will cycle through the windows of VSCode, Zed, and Rider.
 this way, the muscle memory stays even if you use multiple code editors
 
+### dynamic pinning
+
+sometimes you want to quickly access an app that's not in your usual bindings.
+instead of editing your config, you can use dynamic pinning
+
+```lua
+hs.loadSpoon("WindowStrider")
+    :bindPinHotkey({"option"}, "1", "shift")
+```
+
+with this setup:
+- <kbd>option</kbd> + <kbd>shift</kbd> + <kbd>1</kbd> pins the currently focused app to the hotkey
+- <kbd>option</kbd> + <kbd>1</kbd> cycles through windows of the pinned app
+
+this is useful when you're temporarily working with an app you don't usually use
+
 ### delay
 
 the thought of switching to another app should instantly translate to the action of switching to it.
