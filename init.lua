@@ -12,6 +12,7 @@ obj.author = "Dubzer"
 obj.license = "MIT"
 
 local log = hs.logger.new("WindowStrider")
+local prettyAlert = dofile(hs.spoons.resourcePath("prettyAlert.lua"))
 
 local tinsert, tsort = table.insert, table.sort
 
@@ -185,7 +186,7 @@ function obj:bindPinHotkey(mods, key, recordMod)
     keep(hs.hotkey.bind(recordModifiers, key, function()
         local focused = hs.window.focusedWindow()
         if not focused then
-            hs.alert.show("⚠️ No focused window to pin")
+            prettyAlert("⚠️", "No focused window to pin")
             return
         end
 
@@ -198,13 +199,13 @@ function obj:bindPinHotkey(mods, key, recordMod)
         pinnedBundleID = app:bundleID()
         cycleWindows = createWindowSwitcher({pinnedBundleID})
 
-        hs.alert.show("📌 Pinned " .. app:name() .. " to " .. formatHotkey(mods, key))
+        prettyAlert("📌", app:name() .. " → " .. formatHotkey(mods, key))
     end))
 
     -- Switch hotkey: cycles through pinned app's windows
     keep(hs.hotkey.bind(mods, key, function()
         if not pinnedBundleID then
-            hs.alert.show("⚠️ No app pinned")
+            prettyAlert("⚠️", "No app pinned")
             return
         end
 
